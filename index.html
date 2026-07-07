@@ -32,392 +32,173 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Noto Sans SC', system-ui, sans-serif; }
-        .platform-card { transition: all 0.2s ease; }
-        .platform-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-        .platform-card.active { border-color: #FF6B35; background: linear-gradient(135deg, #FFF7F3, #FFFFFF); box-shadow: 0 4px 20px rgba(255,107,53,0.2); }
-        .size-btn { transition: all 0.15s ease; }
-        .size-btn.active { background: #FF6B35; color: white; border-color: #FF6B35; }
-        .drop-zone { transition: all 0.3s ease; }
         .drop-zone.dragover { border-color: #FF6B35; background: #FFF7F3; }
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .mode-btn { transition: all 0.15s ease; }
-        .mode-btn.active { background: #FF6B35; color: white; }
-        .preview-container { background: repeating-conic-gradient(#f0f0f0 0% 25%, #fff 0% 50%) 50% / 20px 20px; }
-        .batch-item { transition: all 0.2s ease; }
-        .batch-item:hover { transform: scale(1.02); }
-        .batch-item.processing { opacity: 0.6; }
-        .toast { animation: slideUp 0.3s ease, fadeOut 0.3s ease 2.7s; }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        .typing-dots span { animation: blink 1.4s infinite both; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
+        .chat-area { scrollbar-width: thin; scrollbar-color: #ddd transparent; }
+        .chat-area::-webkit-scrollbar { width: 5px; }
+        .chat-area::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+        .platform-btn { transition: all 0.15s ease; }
+        .platform-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,107,53,0.2); }
+        .platform-btn.selected { border-color: #FF6B35; background: #FFF7F3; }
+        .result-card { transition: all 0.2s ease; }
+        .result-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
     </style>
 </head>
-<body class="bg-surface min-h-screen flex flex-col">
+<body class="bg-gray-50 h-screen flex flex-col overflow-hidden">
+
     <!-- Header -->
-    <header class="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
+    <header class="bg-white border-b border-gray-100 flex-shrink-0 z-50 shadow-sm">
+        <div class="max-w-3xl mx-auto px-4">
+            <div class="flex items-center justify-between h-14">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center shadow-md">
-                        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <div class="w-8 h-8 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center shadow-md">
+                        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                         </svg>
                     </div>
-                    <div>
-                        <h1 class="text-lg font-bold text-gray-900 leading-tight">电商图片尺寸</h1>
-                        <p class="text-xs text-gray-400 leading-tight hidden sm:block">一键适配各平台图片尺寸</p>
-                    </div>
+                    <h1 class="text-base font-bold text-gray-900">图片尺寸适配</h1>
                 </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs text-gray-400 bg-gray-50 px-3 py-1.5 rounded-full">纯前端 · 隐私安全</span>
-                </div>
+                <span class="text-xs text-gray-400 bg-gray-50 px-3 py-1 rounded-full">纯前端 · 隐私安全</span>
             </div>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
-        <div class="flex flex-col lg:flex-row gap-6">
-            <!-- Left Panel: Platform Selection -->
-            <div class="lg:w-72 flex-shrink-0">
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sticky top-24">
-                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">选择平台</h2>
-                    <div id="platformList" class="space-y-2">
-                        <!-- Platforms rendered by JS -->
-                    </div>
+    <!-- Chat Area -->
+    <div id="chatArea" class="chat-area flex-1 overflow-y-auto">
+        <div id="chatMessages" class="max-w-3xl mx-auto px-4 py-6 space-y-4">
+            <!-- Messages will be appended here -->
+        </div>
+    </div>
 
-                    <!-- Custom Size Inputs (hidden by default) -->
-                    <div id="customSizePanel" class="hidden mt-4 p-4 bg-orange-50 rounded-xl border border-orange-100">
-                        <h3 class="text-sm font-medium text-gray-700 mb-3">自定义尺寸 (px)</h3>
-                        <div class="flex gap-2 items-center">
-                            <div class="flex-1">
-                                <label class="text-xs text-gray-500 mb-1 block">宽度</label>
-                                <input type="number" id="customWidth" placeholder="宽" min="1" max="10000" value="800"
-                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-                            </div>
-                            <span class="text-gray-400 mt-5">×</span>
-                            <div class="flex-1">
-                                <label class="text-xs text-gray-500 mb-1 block">高度</label>
-                                <input type="number" id="customHeight" placeholder="高" min="1" max="10000" value="800"
-                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <!-- Bottom Input Area -->
+    <div class="flex-shrink-0 bg-white border-t border-gray-100">
+        <div class="max-w-3xl mx-auto px-4 py-3">
+            <!-- Mode selector (shown after image upload) -->
+            <div id="modeBar" class="hidden mb-2 flex items-center gap-2 flex-wrap">
+                <span class="text-xs text-gray-400">裁剪模式：</span>
+                <button onclick="setMode('cover')" data-mode="cover" class="mode-btn text-xs px-3 py-1.5 rounded-full border border-gray-200 bg-primary text-white font-medium">覆盖裁剪</button>
+                <button onclick="setMode('contain')" data-mode="contain" class="mode-btn text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 font-medium hover:border-primary hover:text-primary">适应留白</button>
+                <button onclick="setMode('stretch')" data-mode="stretch" class="mode-btn text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 font-medium hover:border-primary hover:text-primary">拉伸填满</button>
             </div>
-
-            <!-- Right Panel -->
-            <div class="flex-1 min-w-0 space-y-6">
-                <!-- Size Selection -->
-                <div id="sizeSection" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">图片类型</h2>
-                        <span id="sizeInfo" class="text-xs text-gray-400"></span>
-                    </div>
-                    <div id="sizeList" class="flex flex-wrap gap-2">
-                        <p class="text-sm text-gray-400">请先选择一个平台</p>
-                    </div>
+            <!-- Upload zone -->
+            <div id="dropZone" class="drop-zone border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-primary/50 hover:bg-orange-50/30 transition-all" onclick="document.getElementById('fileInput').click()">
+                <div class="flex items-center justify-center gap-3">
+                    <svg class="w-5 h-5 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <p class="text-sm text-gray-500">点击或拖拽上传图片</p>
                 </div>
-
-                <!-- Crop Mode -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">裁剪模式</h2>
-                    <div class="flex flex-wrap gap-3">
-                        <button onclick="setMode('cover')" data-mode="cover" class="mode-btn active px-4 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-medium text-gray-700 hover:border-primary hover:text-primary">
-                            <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16v16H4z"/><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10v10"/></svg>
-                                <div class="text-left">
-                                    <div>覆盖 (Crop)</div>
-                                    <div class="text-xs font-normal text-gray-400">保持比例，裁掉多余</div>
-                                </div>
-                            </div>
-                        </button>
-                        <button onclick="setMode('contain')" data-mode="contain" class="mode-btn px-4 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-medium text-gray-700 hover:border-primary hover:text-primary">
-                            <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
-                                <div class="text-left">
-                                    <div>适应 (Fit)</div>
-                                    <div class="text-xs font-normal text-gray-400">保持比例，留白填充</div>
-                                </div>
-                            </div>
-                        </button>
-                        <button onclick="setMode('stretch')" data-mode="stretch" class="mode-btn px-4 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-medium text-gray-700 hover:border-primary hover:text-primary">
-                            <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5"/></svg>
-                                <div class="text-left">
-                                    <div>拉伸 (Stretch)</div>
-                                    <div class="text-xs font-normal text-gray-400">强制填满，可能变形</div>
-                                </div>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Upload Area -->
-                <div id="uploadSection" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">上传图片</h2>
-                    <div id="dropZone" class="drop-zone border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-orange-50/30">
-                        <div class="flex flex-col items-center gap-3">
-                            <div class="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center">
-                                <svg class="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-gray-700">拖拽图片到这里，或<span class="text-primary">点击上传</span></p>
-                                <p class="text-xs text-gray-400 mt-1">支持 JPG / PNG / WebP，可一次选择多张</p>
-                            </div>
-                        </div>
-                        <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
-                    </div>
-                </div>
-
-                <!-- Preview & Results -->
-                <div id="previewSection" class="hidden fade-in space-y-6">
-                    <!-- Current Target Info -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">目标尺寸</h2>
-                                <p id="targetSizeLabel" class="text-xl font-bold text-gray-900">-</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="downloadAll()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl text-sm font-medium hover:shadow-lg hover:shadow-primary/25 transition-all">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                    全部下载
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Batch Processing Results -->
-                    <div id="batchResults" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                        <!-- Filled by JS -->
-                    </div>
-                </div>
+                <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
             </div>
         </div>
-    </main>
+    </div>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-gray-100 mt-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <p class="text-xs text-gray-400">&copy; 2025 电商图片尺寸. 所有图片处理均在浏览器本地完成，不会上传至服务器。</p>
-                <div class="flex items-center gap-4 text-xs text-gray-400">
-                    <span>纯前端处理</span>
-                    <span>·</span>
-                    <span>隐私安全</span>
-                    <span>·</span>
-                    <span>免费使用</span>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Toast Container -->
-    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 space-y-2"></div>
+    <!-- Hidden canvas for processing -->
+    <canvas id="processCanvas" class="hidden"></canvas>
 
     <script>
     // ============ Platform Data ============
     const platforms = {
-        taobao: {
-            name: '淘宝/天猫',
-            icon: '🛒',
-            sizes: {
-                '主图': { width: 800, height: 800, desc: '正方形，建议800×800以上' },
-                '详情页': { width: 790, height: 0, desc: '宽度790，高度不限' },
-                '店铺头图': { width: 1920, height: 600, desc: '1920×600' },
-                '直通车图': { width: 800, height: 800, desc: '正方形800×800' },
-            }
-        },
-        jd: {
-            name: '京东',
-            icon: '🏬',
-            sizes: {
-                '主图': { width: 800, height: 800, desc: '正方形，建议800×800以上' },
-                '详情页': { width: 990, height: 0, desc: '宽度990，高度不限' },
-                '轮播图': { width: 1000, height: 400, desc: '1000×400' },
-            }
-        },
-        pdd: {
-            name: '拼多多',
-            icon: '🏷️',
-            sizes: {
-                '主图': { width: 750, height: 750, desc: '正方形，建议750×750以上' },
-                '详情页': { width: 750, height: 0, desc: '宽度750，高度不限' },
-                '轮播图': { width: 750, height: 352, desc: '750×352' },
-            }
-        },
-        xiaohongshu: {
-            name: '小红书',
-            icon: '📕',
-            sizes: {
-                '封面图': { width: 1080, height: 1440, desc: '3:4比例，1080×1440' },
-                '正方形': { width: 1080, height: 1080, desc: '1:1比例' },
-                '横版': { width: 1080, height: 810, desc: '4:3比例' },
-            }
-        },
-        douyin: {
-            name: '抖音',
-            icon: '🎵',
-            sizes: {
-                '视频封面': { width: 1080, height: 1920, desc: '9:16竖版' },
-                '个人头像': { width: 400, height: 400, desc: '正方形' },
-                '商品主图': { width: 800, height: 800, desc: '正方形800×800' },
-            }
-        },
-        wechat: {
-            name: '微信公众号',
-            icon: '💬',
-            sizes: {
-                '封面大图': { width: 900, height: 383, desc: '2.35:1比例' },
-                '封面小图': { width: 200, height: 200, desc: '1:1正方形' },
-                '正文图片': { width: 1080, height: 0, desc: '宽度1080，高度不限' },
-            }
-        },
-        custom: {
-            name: '自定义尺寸',
-            icon: '⚙️',
-            sizes: {
-                '自定义': { width: 0, height: 0, desc: '输入宽高' },
-            }
-        }
+        taobao: { name: '淘宝/天猫', icon: '🛒', sizes: { '主图': { width: 800, height: 800 }, '详情页': { width: 790, height: 0 }, '店铺头图': { width: 1920, height: 600 } } },
+        jd: { name: '京东', icon: '🏬', sizes: { '主图': { width: 800, height: 800 }, '详情页': { width: 990, height: 0 }, '轮播图': { width: 1000, height: 400 } } },
+        pdd: { name: '拼多多', icon: '🏷️', sizes: { '主图': { width: 750, height: 750 }, '详情页': { width: 750, height: 0 }, '轮播图': { width: 750, height: 352 } } },
+        xiaohongshu: { name: '小红书', icon: '📕', sizes: { '封面图 3:4': { width: 1080, height: 1440 }, '正方形 1:1': { width: 1080, height: 1080 }, '横版 4:3': { width: 1080, height: 810 } } },
+        douyin: { name: '抖音', icon: '🎵', sizes: { '视频封面 9:16': { width: 1080, height: 1920 }, '商品主图': { width: 800, height: 800 } } },
+        wechat: { name: '微信公众号', icon: '💬', sizes: { '封面大图 2.35:1': { width: 900, height: 383 }, '封面小图': { width: 200, height: 200 }, '正文图片': { width: 1080, height: 0 } } },
     };
 
     // ============ State ============
     let state = {
-        platform: null,
-        sizeKey: null,
         mode: 'cover',
-        images: [],       // { file, img, name, resultBlob, resultUrl }
+        images: [],
+        currentPlatform: null,
+        currentSizeKey: null,
+        waitingForPlatform: false,
+        waitingForCustomSize: false,
     };
+
+    const chatMessages = document.getElementById('chatMessages');
+    const chatArea = document.getElementById('chatArea');
 
     // ============ Init ============
     function init() {
-        renderPlatforms();
         setupDropZone();
-        setupCustomInputs();
+        addBotMessage(`你好！我是图片尺寸助手 📐\n\n上传一张图片，我帮你适配各平台的尺寸要求。支持淘宝、天猫、京东、拼多多、小红书、抖音等。`);
     }
 
-    // ============ Render Platforms ============
-    function renderPlatforms() {
-        const container = document.getElementById('platformList');
-        container.innerHTML = '';
-        Object.entries(platforms).forEach(([key, p]) => {
-            const btn = document.createElement('button');
-            btn.className = 'platform-card w-full text-left px-4 py-3 rounded-xl border-2 border-gray-100 bg-white hover:border-primary/30';
-            btn.dataset.platform = key;
-            btn.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <span class="text-xl">${p.icon}</span>
-                    <div>
-                        <div class="text-sm font-medium text-gray-800">${p.name}</div>
-                        <div class="text-xs text-gray-400">${Object.keys(p.sizes).length} 种尺寸</div>
+    // ============ Chat Helpers ============
+    function scrollToBottom() {
+        requestAnimationFrame(() => { chatArea.scrollTop = chatArea.scrollHeight; });
+    }
+
+    function addUserMessage(html) {
+        const div = document.createElement('div');
+        div.className = 'flex justify-end fade-in';
+        div.innerHTML = `<div class="max-w-[80%] bg-primary text-white rounded-2xl rounded-br-md px-4 py-2.5 text-sm shadow-sm">${html}</div>`;
+        chatMessages.appendChild(div);
+        scrollToBottom();
+    }
+
+    function addBotMessage(text) {
+        const div = document.createElement('div');
+        div.className = 'flex justify-start fade-in';
+        const formattedText = text.replace(/\n/g, '<br>');
+        div.innerHTML = `
+            <div class="flex gap-2 max-w-[85%]">
+                <div class="w-7 h-7 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow">
+                    <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01"/></svg>
+                </div>
+                <div class="bg-white rounded-2xl rounded-bl-md px-4 py-2.5 text-sm text-gray-700 shadow-sm border border-gray-100">${formattedText}</div>
+            </div>`;
+        chatMessages.appendChild(div);
+        scrollToBottom();
+        return div;
+    }
+
+    function addBotHTML(html) {
+        const div = document.createElement('div');
+        div.className = 'flex justify-start fade-in';
+        div.innerHTML = `
+            <div class="flex gap-2 max-w-[90%]">
+                <div class="w-7 h-7 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow">
+                    <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01"/></svg>
+                </div>
+                <div class="bg-white rounded-2xl rounded-bl-md px-4 py-3 text-sm text-gray-700 shadow-sm border border-gray-100">${html}</div>
+            </div>`;
+        chatMessages.appendChild(div);
+        scrollToBottom();
+        return div;
+    }
+
+    function addTypingIndicator() {
+        const div = document.createElement('div');
+        div.className = 'flex justify-start fade-in';
+        div.id = 'typingIndicator';
+        div.innerHTML = `
+            <div class="flex gap-2">
+                <div class="w-7 h-7 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow">
+                    <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01"/></svg>
+                </div>
+                <div class="bg-white rounded-2xl rounded-bl-md px-4 py-3 shadow-sm border border-gray-100">
+                    <div class="typing-dots flex gap-1">
+                        <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                        <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                        <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
                     </div>
                 </div>
-            `;
-            btn.addEventListener('click', () => selectPlatform(key));
-            container.appendChild(btn);
-        });
+            </div>`;
+        chatMessages.appendChild(div);
+        scrollToBottom();
     }
 
-    function selectPlatform(key) {
-        state.platform = key;
-        state.sizeKey = null;
-
-        // Update active state
-        document.querySelectorAll('.platform-card').forEach(el => {
-            el.classList.toggle('active', el.dataset.platform === key);
-        });
-
-        // Custom panel
-        const customPanel = document.getElementById('customSizePanel');
-        customPanel.classList.toggle('hidden', key !== 'custom');
-
-        // Render sizes
-        renderSizes(key);
-
-        // Re-process if images exist
-        if (state.images.length > 0) processAll();
-    }
-
-    function renderSizes(platformKey) {
-        const container = document.getElementById('sizeList');
-        const info = document.getElementById('sizeInfo');
-        const p = platforms[platformKey];
-        container.innerHTML = '';
-        info.textContent = '';
-
-        Object.entries(p.sizes).forEach(([name, size]) => {
-            const btn = document.createElement('button');
-            btn.className = 'size-btn px-4 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-medium text-gray-700 hover:border-primary hover:text-primary';
-            btn.dataset.size = name;
-            btn.textContent = name;
-            btn.addEventListener('click', () => selectSize(name));
-            container.appendChild(btn);
-        });
-    }
-
-    function selectSize(name) {
-        state.sizeKey = name;
-
-        document.querySelectorAll('.size-btn').forEach(el => {
-            el.classList.toggle('active', el.dataset.size === name);
-        });
-
-        const size = getCurrentSize();
-        const info = document.getElementById('sizeInfo');
-        if (size) {
-            if (size.height === 0) {
-                info.textContent = `宽${size.width}px · 高度不限`;
-            } else if (size.width === 0) {
-                info.textContent = '自定义尺寸';
-            } else {
-                info.textContent = `${size.width} × ${size.height} px`;
-            }
-        }
-
-        updateTargetLabel();
-        if (state.images.length > 0) processAll();
-    }
-
-    function getCurrentSize() {
-        if (!state.platform || !state.sizeKey) return null;
-        const p = platforms[state.platform];
-        const s = p.sizes[state.sizeKey];
-        if (!s) return null;
-
-        if (state.platform === 'custom') {
-            const w = parseInt(document.getElementById('customWidth').value) || 800;
-            const h = parseInt(document.getElementById('customHeight').value) || 800;
-            return { width: w, height: h, desc: `${w}×${h}` };
-        }
-        return s;
-    }
-
-    function updateTargetLabel() {
-        const label = document.getElementById('targetSizeLabel');
-        const size = getCurrentSize();
-        if (!size) { label.textContent = '-'; return; }
-        const pName = platforms[state.platform]?.name || '';
-        const sName = state.sizeKey || '';
-        if (size.width === 0 && size.height === 0) {
-            label.textContent = `${pName} · ${sName}`;
-        } else if (size.height === 0) {
-            label.textContent = `${pName} · ${sName} · ${size.width}×自适应 px`;
-        } else {
-            label.textContent = `${pName} · ${sName} · ${size.width}×${size.height} px`;
-        }
-    }
-
-    // ============ Mode ============
-    function setMode(mode) {
-        state.mode = mode;
-        document.querySelectorAll('.mode-btn').forEach(el => {
-            el.classList.toggle('active', el.dataset.mode === mode);
-        });
-        if (state.images.length > 0) processAll();
+    function removeTypingIndicator() {
+        const el = document.getElementById('typingIndicator');
+        if (el) el.remove();
     }
 
     // ============ Drop Zone ============
@@ -425,51 +206,31 @@
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
 
-        dropZone.addEventListener('click', () => fileInput.click());
-
-        dropZone.addEventListener('dragover', e => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
         dropZone.addEventListener('drop', e => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
             handleFiles(e.dataTransfer.files);
         });
-
         fileInput.addEventListener('change', e => {
             handleFiles(e.target.files);
             fileInput.value = '';
         });
     }
 
-    function setupCustomInputs() {
-        document.getElementById('customWidth').addEventListener('change', () => {
-            if (state.platform === 'custom' && state.images.length > 0) processAll();
-            updateTargetLabel();
-        });
-        document.getElementById('customHeight').addEventListener('change', () => {
-            if (state.platform === 'custom' && state.images.length > 0) processAll();
-            updateTargetLabel();
-        });
-    }
-
     // ============ File Handling ============
     function handleFiles(fileList) {
         const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
-        if (files.length === 0) {
-            showToast('请选择图片文件', 'warning');
-            return;
-        }
+        if (files.length === 0) return;
 
         // Clear previous
-        state.images.forEach(item => {
-            if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
-        });
+        state.images.forEach(item => { if (item.resultUrl) URL.revokeObjectURL(item.resultUrl); });
         state.images = [];
+        state.currentPlatform = null;
+        state.currentSizeKey = null;
+        state.waitingForPlatform = false;
+        state.waitingForCustomSize = false;
 
         let loaded = 0;
         files.forEach(file => {
@@ -480,15 +241,106 @@
                     state.images.push({ file, img, name: file.name, resultBlob: null, resultUrl: null });
                     loaded++;
                     if (loaded === files.length) {
-                        document.getElementById('previewSection').classList.remove('hidden');
-                        processAll();
-                        showToast(`已加载 ${files.length} 张图片`, 'success');
+                        onImagesLoaded(files.length);
                     }
                 };
                 img.src = e.target.result;
             };
             reader.readAsDataURL(file);
         });
+    }
+
+    function onImagesLoaded(count) {
+        // Show user message with thumbnail
+        const first = state.images[0];
+        let thumbHtml = '';
+        if (count === 1) {
+            const maxW = 120;
+            const scale = Math.min(maxW / first.img.width, maxW / first.img.height, 1);
+            const tw = Math.round(first.img.width * scale);
+            const th = Math.round(first.img.height * scale);
+            thumbHtml = `<img src="${first.img.src}" style="max-width:${tw}px;max-height:${th}px;border-radius:8px;" class="mb-1">`;
+        } else {
+            thumbHtml = `<div class="grid grid-cols-4 gap-1 mb-1">`;
+            state.images.slice(0, 4).forEach(item => {
+                thumbHtml += `<img src="${item.img.src}" class="w-14 h-14 object-cover rounded-lg">`;
+            });
+            if (count > 4) thumbHtml += `<div class="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center text-xs font-bold">+${count-4}</div>`;
+            thumbHtml += `</div>`;
+        }
+        const sizeInfo = count === 1 ? `${first.img.width} × ${first.img.height} · ${formatBytes(first.file.size)}` : `共 ${count} 张图片`;
+        addUserMessage(`${thumbHtml}<div class="text-xs opacity-80 mt-1">${sizeInfo}</div>`);
+
+        // Show mode bar
+        document.getElementById('modeBar').classList.remove('hidden');
+
+        // Show platform selection after short delay
+        setTimeout(() => {
+            showPlatformSelection();
+        }, 300);
+    }
+
+    function showPlatformSelection() {
+        addTypingIndicator();
+        setTimeout(() => {
+            removeTypingIndicator();
+            let html = '<div class="mb-2 text-gray-500">请选择目标平台和尺寸 👇</div>';
+            html += '<div class="space-y-2">';
+            Object.entries(platforms).forEach(([key, p]) => {
+                const sizeNames = Object.entries(p.sizes).map(([name, s]) => `${name} ${s.width}×${s.height || '自适应'}`).join(' · ');
+                html += `<div class="mb-1">
+                    <div class="flex items-center gap-2 mb-1.5">
+                        <span class="text-base">${p.icon}</span>
+                        <span class="text-sm font-semibold text-gray-800">${p.name}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5 ml-7">`;
+                Object.entries(p.sizes).forEach(([name, s]) => {
+                    const label = s.height === 0 ? `${name} ${s.width}×自适应` : `${name} ${s.width}×${s.height}`;
+                    html += `<button onclick="selectPlatform('${key}','${name}')" class="platform-btn text-xs px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-700 font-medium hover:border-primary hover:text-primary hover:bg-orange-50">${label}</button>`;
+                });
+                html += `</div></div>`;
+            });
+            // Custom size
+            html += `<div class="mt-3 pt-3 border-t border-gray-100">
+                <div class="flex items-center gap-2 mb-1.5">
+                    <span class="text-base">⚙️</span>
+                    <span class="text-sm font-semibold text-gray-800">自定义尺寸</span>
+                </div>
+                <div class="ml-7 flex items-center gap-2">
+                    <input type="number" id="customW" placeholder="宽" min="1" max="10000" value="800" class="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-xs text-center focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                    <span class="text-gray-400 text-xs">×</span>
+                    <input type="number" id="customH" placeholder="高" min="1" max="10000" value="800" class="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-xs text-center focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                    <span class="text-gray-400 text-xs">px</span>
+                    <button onclick="selectCustom()" class="platform-btn text-xs px-3 py-1.5 rounded-full border border-primary text-primary bg-orange-50 font-medium hover:bg-primary hover:text-white">确定</button>
+                </div>
+            </div>`;
+            html += '</div>';
+            addBotHTML(html);
+        }, 400);
+    }
+
+    function selectPlatform(platformKey, sizeName) {
+        const p = platforms[platformKey];
+        const s = p.sizes[sizeName];
+        state.currentPlatform = platformKey;
+        state.currentSizeKey = sizeName;
+
+        // User message
+        addUserMessage(`${p.icon} ${p.name} · ${sizeName} · ${s.width}×${s.height || '自适应'} px`);
+
+        // Process
+        setTimeout(() => {
+            processAndShowResult(s.width, s.height);
+        }, 300);
+    }
+
+    function selectCustom() {
+        const w = parseInt(document.getElementById('customW').value) || 800;
+        const h = parseInt(document.getElementById('customH').value) || 800;
+        addUserMessage(`⚙️ 自定义尺寸 ${w} × ${h} px`);
+        setTimeout(() => {
+            processAndShowResult(w, h);
+        }, 300);
     }
 
     // ============ Image Processing ============
@@ -517,99 +369,71 @@
         } else {
             ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
         }
-
         return canvas;
     }
 
-    function processAll() {
-        const size = getCurrentSize();
-        if (!size || (size.width === 0 && size.height === 0 && state.platform !== 'custom')) return;
-        if (state.images.length === 0) return;
+    async function processAndShowResult(targetW, targetH) {
+        addTypingIndicator();
+        await new Promise(r => setTimeout(r, 200));
 
-        const container = document.getElementById('batchResults');
-        container.innerHTML = '';
-
-        state.images.forEach((item, index) => {
-            let tw = size.width;
-            let th = size.height;
-
-            // Auto-calculate for height=0
-            if (th === 0 && tw > 0) {
-                th = Math.round(item.img.height * (tw / item.img.width));
-            }
-            if (tw === 0 && th > 0) {
-                tw = Math.round(item.img.width * (th / item.img.height));
-            }
-            if (tw === 0 && th === 0) {
-                tw = parseInt(document.getElementById('customWidth').value) || 800;
-                th = parseInt(document.getElementById('customHeight').value) || 800;
-            }
+        const results = [];
+        for (const item of state.images) {
+            let tw = targetW;
+            let th = targetH;
+            if (th === 0 && tw > 0) th = Math.round(item.img.height * (tw / item.img.width));
+            if (tw === 0 && th > 0) tw = Math.round(item.img.width * (th / item.img.height));
 
             const canvas = resizeImage(item.img, tw, th, state.mode);
-
-            canvas.toBlob(blob => {
-                if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
-                item.resultBlob = blob;
-                item.resultUrl = URL.createObjectURL(blob);
-
-                renderResultCard(item, index, tw, th, container);
-            }, 'image/jpeg', 0.95);
-        });
-    }
-
-    function renderResultCard(item, index, tw, th, container) {
-        const card = document.createElement('div');
-        card.className = 'batch-item bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden fade-in';
-
-        const origSize = formatBytes(item.file.size);
-        const newSize = item.resultBlob ? formatBytes(item.resultBlob.size) : '-';
-
-        // Thumbnail: use small canvas preview
-        const previewCanvas = document.createElement('canvas');
-        const maxPreview = 300;
-        const scale = Math.min(maxPreview / tw, maxPreview / th, 1);
-        previewCanvas.width = Math.round(tw * scale);
-        previewCanvas.height = Math.round(th * scale);
-        const pCtx = previewCanvas.getContext('2d');
-
-        // Draw checkerboard
-        const tileSize = 8;
-        for (let y = 0; y < previewCanvas.height; y += tileSize) {
-            for (let x = 0; x < previewCanvas.width; x += tileSize) {
-                pCtx.fillStyle = ((x / tileSize + y / tileSize) % 2 === 0) ? '#f5f5f5' : '#ffffff';
-                pCtx.fillRect(x, y, tileSize, tileSize);
-            }
+            const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.95));
+            if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
+            item.resultBlob = blob;
+            item.resultUrl = URL.createObjectURL(blob);
+            results.push({ item, tw, th, blob });
         }
 
-        const pImg = new Image();
-        pImg.onload = () => {
-            pCtx.drawImage(pImg, 0, 0, previewCanvas.width, previewCanvas.height);
-            const thumbUrl = previewCanvas.toDataURL('image/jpeg', 0.8);
+        removeTypingIndicator();
 
+        // Build result message
+        let html = `<div class="text-gray-500 mb-2">处理完成！✅ 共 ${results.length} 张</div>`;
+        html += `<div class="grid grid-cols-2 gap-2 mb-3">`;
+        results.forEach(({ item, tw, th, blob }, idx) => {
+            const globalIdx = state.images.indexOf(item);
             const baseName = item.name.replace(/\.[^.]+$/, '');
-            const ext = 'jpg';
-
-            card.innerHTML = `
-                <div class="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
-                    <img src="${thumbUrl}" class="max-w-full max-h-full object-contain" alt="preview">
-                </div>
-                <div class="p-3">
-                    <p class="text-xs text-gray-600 font-medium truncate mb-1" title="${item.name}">${item.name}</p>
-                    <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
-                        <span>${tw}×${th}</span>
-                        <span>${origSize} → ${newSize}</span>
+            html += `
+                <div class="result-card bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
+                    <div class="aspect-square flex items-center justify-center p-2 bg-white">
+                        <img src="${item.resultUrl}" class="max-w-full max-h-full object-contain rounded" alt="result">
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="downloadSingle(${index}, '${baseName}_${tw}x${th}.${ext}')" class="flex-1 px-3 py-2 bg-primary/10 text-primary rounded-lg text-xs font-medium hover:bg-primary/20 transition-colors">
-                            下载
-                        </button>
+                    <div class="px-2 py-1.5">
+                        <p class="text-[10px] text-gray-500 truncate">${item.name}</p>
+                        <p class="text-[10px] text-gray-400">${tw}×${th} · ${formatBytes(blob.size)}</p>
+                        <button onclick="downloadSingle(${globalIdx},'${baseName}_${tw}x${th}.jpg')" class="w-full mt-1 px-2 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-medium hover:bg-primary/20 transition-colors">下载</button>
                     </div>
-                </div>
-            `;
-        };
-        pImg.src = item.resultUrl;
+                </div>`;
+        });
+        html += `</div>`;
 
-        container.appendChild(card);
+        if (results.length > 1) {
+            html += `<button onclick="downloadAll()" class="w-full px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl text-xs font-medium hover:shadow-lg hover:shadow-primary/25 transition-all flex items-center justify-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                全部下载
+            </button>`;
+        }
+
+        html += `<p class="text-xs text-gray-400 mt-3">💡 可以继续上传新图片</p>`;
+        addBotHTML(html);
+    }
+
+    // ============ Mode ============
+    function setMode(mode) {
+        state.mode = mode;
+        document.querySelectorAll('.mode-btn').forEach(el => {
+            if (el.dataset.mode === mode) {
+                el.className = 'mode-btn text-xs px-3 py-1.5 rounded-full border border-gray-200 bg-primary text-white font-medium';
+            } else {
+                el.className = 'mode-btn text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 font-medium hover:border-primary hover:text-primary';
+            }
+        });
     }
 
     // ============ Downloads ============
@@ -620,27 +444,18 @@
         a.href = item.resultUrl;
         a.download = filename;
         a.click();
-        showToast('开始下载', 'success');
     }
 
     function downloadAll() {
         if (state.images.length === 0) return;
-        const size = getCurrentSize();
-        if (!size) return;
-
         state.images.forEach((item, index) => {
-            let tw = size.width;
-            let th = size.height;
-            if (th === 0 && tw > 0) th = Math.round(item.img.height * (tw / item.img.width));
-            if (tw === 0 && th > 0) tw = Math.round(item.img.width * (th / item.img.height));
-            if (tw === 0 && th === 0) {
-                tw = parseInt(document.getElementById('customWidth').value) || 800;
-                th = parseInt(document.getElementById('customHeight').value) || 800;
-            }
+            if (!item.resultUrl) return;
             const baseName = item.name.replace(/\.[^.]+$/, '');
+            const size = state.currentSizeKey ? platforms[state.currentPlatform]?.sizes[state.currentSizeKey] : null;
+            const tw = size ? size.width : 800;
+            const th = size ? (size.height || Math.round(item.img.height * (tw / item.img.width))) : 800;
             setTimeout(() => downloadSingle(index, `${baseName}_${tw}x${th}.jpg`), index * 200);
         });
-        showToast(`开始下载 ${state.images.length} 张图片`, 'success');
     }
 
     // ============ Utilities ============
@@ -648,21 +463,6 @@
         if (bytes < 1024) return bytes + ' B';
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    }
-
-    function showToast(msg, type = 'info') {
-        const container = document.getElementById('toastContainer');
-        const toast = document.createElement('div');
-        const colors = {
-            success: 'bg-green-500',
-            warning: 'bg-amber-500',
-            info: 'bg-blue-500',
-            error: 'bg-red-500'
-        };
-        toast.className = `toast ${colors[type] || colors.info} text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg`;
-        toast.textContent = msg;
-        container.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
     }
 
     // ============ Start ============
