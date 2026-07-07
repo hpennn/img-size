@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电商图片尺寸 - 一键适配各平台图片尺寸</title>
+    <meta name="description" content="电商图片尺寸适配工具，支持淘宝、天猫、京东、拼多多、小红书、抖音、微信公众号等主流电商平台的图片尺寸裁剪和缩放。">
+    <meta name="keywords" content="电商图片,图片尺寸,淘宝图片,京东图片,图片裁剪,图片缩放,电商工具">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B35',
+                        'primary-dark': '#E55A2B',
+                        'primary-light': '#FF8F65',
+                        surface: '#FAFAFA',
+                        'surface-dark': '#F0F0F0',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Noto Sans SC', system-ui, sans-serif; }
+        .platform-card { transition: all 0.2s ease; }
+        .platform-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .platform-card.active { border-color: #FF6B35; background: linear-gradient(135deg, #FFF7F3, #FFFFFF); box-shadow: 0 4px 20px rgba(255,107,53,0.2); }
+        .size-btn { transition: all 0.15s ease; }
+        .size-btn.active { background: #FF6B35; color: white; border-color: #FF6B35; }
+        .drop-zone { transition: all 0.3s ease; }
+        .drop-zone.dragover { border-color: #FF6B35; background: #FFF7F3; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .mode-btn { transition: all 0.15s ease; }
+        .mode-btn.active { background: #FF6B35; color: white; }
+        .preview-container { background: repeating-conic-gradient(#f0f0f0 0% 25%, #fff 0% 50%) 50% / 20px 20px; }
+        .batch-item { transition: all 0.2s ease; }
+        .batch-item:hover { transform: scale(1.02); }
+        .batch-item.processing { opacity: 0.6; }
+        .toast { animation: slideUp 0.3s ease, fadeOut 0.3s ease 2.7s; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+    </style>
+</head>
+<body class="bg-surface min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center shadow-md">
+                        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-gray-900 leading-tight">电商图片尺寸</h1>
+                        <p class="text-xs text-gray-400 leading-tight hidden sm:block">一键适配各平台图片尺寸</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400 bg-gray-50 px-3 py-1.5 rounded-full">纯前端 · 隐私安全</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- Left Panel: Platform Selection -->
+            <div class="lg:w-72 flex-shrink-0">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sticky top-24">
+                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">选择平台</h2>
+                    <div id="platformList" class="space-y-2">
+                        <!-- Platforms rendered by JS -->
+                    </div>
+
+                    <!-- Custom Size Inputs (hidden by default) -->
+                    <div id="customSizePanel" class="hidden mt-4 p-4 bg-orange-50 rounded-xl border border-orange-100">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">自定义尺寸 (px)</h3>
+                        <div class="flex gap-2 items-center">
+                            <div class="flex-1">
+                                <label class="text-xs text-gray-500 mb-1 block">宽度</label>
+                                <input type="number" id="customWidth" placeholder="宽" min="1" max="10000" value="800"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                            </div>
+                            <span class="text-gray-400 mt-5">×</span>
+                            <div class="flex-1">
+                                <label class="text-xs text-gray-500 mb-1 block">高度</label>
+                                <input type="number" id="customHeight" placeholder="高" min="1" max="10000" value="800"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel -->
+            <div class="flex-1 min-w-0 space-y-6">
+                <!-- Size Selection -->
+                <div id="sizeSection" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">图片类型</h2>
+                        <span id="sizeInfo" class="text-xs text-gray-400"></span>
+                    </div>
+                    <div id="sizeList" class="flex flex-wrap gap-2">
+                        <p class="text-sm text-gray-400">请先选择一个平台</p>
+                    </div>
+                </div>
+
+                <!-- Crop Mode -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">裁剪模式</h2>
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="setMode('cover')" data-mode="cover" class="mode-btn active px-4 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-medium text-gray-700 hover:border-primary hover:text-primary">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16v16H4z"/><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10v10"/></svg>
+                                <div class="text-left">
+                                    <div>覆盖 (Crop)</div>
+                                    <div class="text-xs font-normal text-gray-400">保持比例，裁掉多余</div>
+                                </div>
+                            </div>
+                        </button>
+                        <button onclick="setMode('contain')" data-mode="contain" class="mode-btn px-4 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-medium text-gray-700 hover:border-primary hover:text-primary">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                                <div class="text-left">
+                                    <div>适应 (Fit)</div>
+                                    <div class="text-xs font-normal text-gray-400">保持比例，留白填充</div>
+                                </div>
+                            </div>
+                        </button>
+                        <button onclick="setMode('stretch')" data-mode="stretch" class="mode-btn px-4 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-medium text-gray-700 hover:border-primary hover:text-primary">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5"/></svg>
+                                <div class="text-left">
+                                    <div>拉伸 (Stretch)</div>
+                                    <div class="text-xs font-normal text-gray-400">强制填满，可能变形</div>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Upload Area -->
+                <div id="uploadSection" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">上传图片</h2>
+                    <div id="dropZone" class="drop-zone border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-orange-50/30">
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center">
+                                <svg class="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">拖拽图片到这里，或<span class="text-primary">点击上传</span></p>
+                                <p class="text-xs text-gray-400 mt-1">支持 JPG / PNG / WebP，可一次选择多张</p>
+                            </div>
+                        </div>
+                        <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
+                    </div>
+                </div>
+
+                <!-- Preview & Results -->
+                <div id="previewSection" class="hidden fade-in space-y-6">
+                    <!-- Current Target Info -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">目标尺寸</h2>
+                                <p id="targetSizeLabel" class="text-xl font-bold text-gray-900">-</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="downloadAll()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl text-sm font-medium hover:shadow-lg hover:shadow-primary/25 transition-all">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    全部下载
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Batch Processing Results -->
+                    <div id="batchResults" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-100 mt-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <p class="text-xs text-gray-400">&copy; 2025 电商图片尺寸. 所有图片处理均在浏览器本地完成，不会上传至服务器。</p>
+                <div class="flex items-center gap-4 text-xs text-gray-400">
+                    <span>纯前端处理</span>
+                    <span>·</span>
+                    <span>隐私安全</span>
+                    <span>·</span>
+                    <span>免费使用</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 space-y-2"></div>
+
+    <script>
+    // ============ Platform Data ============
+    const platforms = {
+        taobao: {
+            name: '淘宝/天猫',
+            icon: '🛒',
+            sizes: {
+                '主图': { width: 800, height: 800, desc: '正方形，建议800×800以上' },
+                '详情页': { width: 790, height: 0, desc: '宽度790，高度不限' },
+                '店铺头图': { width: 1920, height: 600, desc: '1920×600' },
+                '直通车图': { width: 800, height: 800, desc: '正方形800×800' },
+            }
+        },
+        jd: {
+            name: '京东',
+            icon: '🏬',
+            sizes: {
+                '主图': { width: 800, height: 800, desc: '正方形，建议800×800以上' },
+                '详情页': { width: 990, height: 0, desc: '宽度990，高度不限' },
+                '轮播图': { width: 1000, height: 400, desc: '1000×400' },
+            }
+        },
+        pdd: {
+            name: '拼多多',
+            icon: '🏷️',
+            sizes: {
+                '主图': { width: 750, height: 750, desc: '正方形，建议750×750以上' },
+                '详情页': { width: 750, height: 0, desc: '宽度750，高度不限' },
+                '轮播图': { width: 750, height: 352, desc: '750×352' },
+            }
+        },
+        xiaohongshu: {
+            name: '小红书',
+            icon: '📕',
+            sizes: {
+                '封面图': { width: 1080, height: 1440, desc: '3:4比例，1080×1440' },
+                '正方形': { width: 1080, height: 1080, desc: '1:1比例' },
+                '横版': { width: 1080, height: 810, desc: '4:3比例' },
+            }
+        },
+        douyin: {
+            name: '抖音',
+            icon: '🎵',
+            sizes: {
+                '视频封面': { width: 1080, height: 1920, desc: '9:16竖版' },
+                '个人头像': { width: 400, height: 400, desc: '正方形' },
+                '商品主图': { width: 800, height: 800, desc: '正方形800×800' },
+            }
+        },
+        wechat: {
+            name: '微信公众号',
+            icon: '💬',
+            sizes: {
+                '封面大图': { width: 900, height: 383, desc: '2.35:1比例' },
+                '封面小图': { width: 200, height: 200, desc: '1:1正方形' },
+                '正文图片': { width: 1080, height: 0, desc: '宽度1080，高度不限' },
+            }
+        },
+        custom: {
+            name: '自定义尺寸',
+            icon: '⚙️',
+            sizes: {
+                '自定义': { width: 0, height: 0, desc: '输入宽高' },
+            }
+        }
+    };
+
+    // ============ State ============
+    let state = {
+        platform: null,
+        sizeKey: null,
+        mode: 'cover',
+        images: [],       // { file, img, name, resultBlob, resultUrl }
+    };
+
+    // ============ Init ============
+    function init() {
+        renderPlatforms();
+        setupDropZone();
+        setupCustomInputs();
+    }
+
+    // ============ Render Platforms ============
+    function renderPlatforms() {
+        const container = document.getElementById('platformList');
+        container.innerHTML = '';
+        Object.entries(platforms).forEach(([key, p]) => {
+            const btn = document.createElement('button');
+            btn.className = 'platform-card w-full text-left px-4 py-3 rounded-xl border-2 border-gray-100 bg-white hover:border-primary/30';
+            btn.dataset.platform = key;
+            btn.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <span class="text-xl">${p.icon}</span>
+                    <div>
+                        <div class="text-sm font-medium text-gray-800">${p.name}</div>
+                        <div class="text-xs text-gray-400">${Object.keys(p.sizes).length} 种尺寸</div>
+                    </div>
+                </div>
+            `;
+            btn.addEventListener('click', () => selectPlatform(key));
+            container.appendChild(btn);
+        });
+    }
+
+    function selectPlatform(key) {
+        state.platform = key;
+        state.sizeKey = null;
+
+        // Update active state
+        document.querySelectorAll('.platform-card').forEach(el => {
+            el.classList.toggle('active', el.dataset.platform === key);
+        });
+
+        // Custom panel
+        const customPanel = document.getElementById('customSizePanel');
+        customPanel.classList.toggle('hidden', key !== 'custom');
+
+        // Render sizes
+        renderSizes(key);
+
+        // Re-process if images exist
+        if (state.images.length > 0) processAll();
+    }
+
+    function renderSizes(platformKey) {
+        const container = document.getElementById('sizeList');
+        const info = document.getElementById('sizeInfo');
+        const p = platforms[platformKey];
+        container.innerHTML = '';
+        info.textContent = '';
+
+        Object.entries(p.sizes).forEach(([name, size]) => {
+            const btn = document.createElement('button');
+            btn.className = 'size-btn px-4 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-medium text-gray-700 hover:border-primary hover:text-primary';
+            btn.dataset.size = name;
+            btn.textContent = name;
+            btn.addEventListener('click', () => selectSize(name));
+            container.appendChild(btn);
+        });
+    }
+
+    function selectSize(name) {
+        state.sizeKey = name;
+
+        document.querySelectorAll('.size-btn').forEach(el => {
+            el.classList.toggle('active', el.dataset.size === name);
+        });
+
+        const size = getCurrentSize();
+        const info = document.getElementById('sizeInfo');
+        if (size) {
+            if (size.height === 0) {
+                info.textContent = `宽${size.width}px · 高度不限`;
+            } else if (size.width === 0) {
+                info.textContent = '自定义尺寸';
+            } else {
+                info.textContent = `${size.width} × ${size.height} px`;
+            }
+        }
+
+        updateTargetLabel();
+        if (state.images.length > 0) processAll();
+    }
+
+    function getCurrentSize() {
+        if (!state.platform || !state.sizeKey) return null;
+        const p = platforms[state.platform];
+        const s = p.sizes[state.sizeKey];
+        if (!s) return null;
+
+        if (state.platform === 'custom') {
+            const w = parseInt(document.getElementById('customWidth').value) || 800;
+            const h = parseInt(document.getElementById('customHeight').value) || 800;
+            return { width: w, height: h, desc: `${w}×${h}` };
+        }
+        return s;
+    }
+
+    function updateTargetLabel() {
+        const label = document.getElementById('targetSizeLabel');
+        const size = getCurrentSize();
+        if (!size) { label.textContent = '-'; return; }
+        const pName = platforms[state.platform]?.name || '';
+        const sName = state.sizeKey || '';
+        if (size.width === 0 && size.height === 0) {
+            label.textContent = `${pName} · ${sName}`;
+        } else if (size.height === 0) {
+            label.textContent = `${pName} · ${sName} · ${size.width}×自适应 px`;
+        } else {
+            label.textContent = `${pName} · ${sName} · ${size.width}×${size.height} px`;
+        }
+    }
+
+    // ============ Mode ============
+    function setMode(mode) {
+        state.mode = mode;
+        document.querySelectorAll('.mode-btn').forEach(el => {
+            el.classList.toggle('active', el.dataset.mode === mode);
+        });
+        if (state.images.length > 0) processAll();
+    }
+
+    // ============ Drop Zone ============
+    function setupDropZone() {
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', e => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', e => {
+            handleFiles(e.target.files);
+            fileInput.value = '';
+        });
+    }
+
+    function setupCustomInputs() {
+        document.getElementById('customWidth').addEventListener('change', () => {
+            if (state.platform === 'custom' && state.images.length > 0) processAll();
+            updateTargetLabel();
+        });
+        document.getElementById('customHeight').addEventListener('change', () => {
+            if (state.platform === 'custom' && state.images.length > 0) processAll();
+            updateTargetLabel();
+        });
+    }
+
+    // ============ File Handling ============
+    function handleFiles(fileList) {
+        const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+        if (files.length === 0) {
+            showToast('请选择图片文件', 'warning');
+            return;
+        }
+
+        // Clear previous
+        state.images.forEach(item => {
+            if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
+        });
+        state.images = [];
+
+        let loaded = 0;
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    state.images.push({ file, img, name: file.name, resultBlob: null, resultUrl: null });
+                    loaded++;
+                    if (loaded === files.length) {
+                        document.getElementById('previewSection').classList.remove('hidden');
+                        processAll();
+                        showToast(`已加载 ${files.length} 张图片`, 'success');
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // ============ Image Processing ============
+    function resizeImage(img, targetWidth, targetHeight, mode) {
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+
+        if (mode === 'cover') {
+            const scale = Math.max(targetWidth / img.width, targetHeight / img.height);
+            const sw = targetWidth / scale;
+            const sh = targetHeight / scale;
+            const sx = (img.width - sw) / 2;
+            const sy = (img.height - sh) / 2;
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetWidth, targetHeight);
+        } else if (mode === 'contain') {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, targetWidth, targetHeight);
+            const scale = Math.min(targetWidth / img.width, targetHeight / img.height);
+            const dw = img.width * scale;
+            const dh = img.height * scale;
+            const dx = (targetWidth - dw) / 2;
+            const dy = (targetHeight - dh) / 2;
+            ctx.drawImage(img, dx, dy, dw, dh);
+        } else {
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+        }
+
+        return canvas;
+    }
+
+    function processAll() {
+        const size = getCurrentSize();
+        if (!size || (size.width === 0 && size.height === 0 && state.platform !== 'custom')) return;
+        if (state.images.length === 0) return;
+
+        const container = document.getElementById('batchResults');
+        container.innerHTML = '';
+
+        state.images.forEach((item, index) => {
+            let tw = size.width;
+            let th = size.height;
+
+            // Auto-calculate for height=0
+            if (th === 0 && tw > 0) {
+                th = Math.round(item.img.height * (tw / item.img.width));
+            }
+            if (tw === 0 && th > 0) {
+                tw = Math.round(item.img.width * (th / item.img.height));
+            }
+            if (tw === 0 && th === 0) {
+                tw = parseInt(document.getElementById('customWidth').value) || 800;
+                th = parseInt(document.getElementById('customHeight').value) || 800;
+            }
+
+            const canvas = resizeImage(item.img, tw, th, state.mode);
+
+            canvas.toBlob(blob => {
+                if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
+                item.resultBlob = blob;
+                item.resultUrl = URL.createObjectURL(blob);
+
+                renderResultCard(item, index, tw, th, container);
+            }, 'image/jpeg', 0.95);
+        });
+    }
+
+    function renderResultCard(item, index, tw, th, container) {
+        const card = document.createElement('div');
+        card.className = 'batch-item bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden fade-in';
+
+        const origSize = formatBytes(item.file.size);
+        const newSize = item.resultBlob ? formatBytes(item.resultBlob.size) : '-';
+
+        // Thumbnail: use small canvas preview
+        const previewCanvas = document.createElement('canvas');
+        const maxPreview = 300;
+        const scale = Math.min(maxPreview / tw, maxPreview / th, 1);
+        previewCanvas.width = Math.round(tw * scale);
+        previewCanvas.height = Math.round(th * scale);
+        const pCtx = previewCanvas.getContext('2d');
+
+        // Draw checkerboard
+        const tileSize = 8;
+        for (let y = 0; y < previewCanvas.height; y += tileSize) {
+            for (let x = 0; x < previewCanvas.width; x += tileSize) {
+                pCtx.fillStyle = ((x / tileSize + y / tileSize) % 2 === 0) ? '#f5f5f5' : '#ffffff';
+                pCtx.fillRect(x, y, tileSize, tileSize);
+            }
+        }
+
+        const pImg = new Image();
+        pImg.onload = () => {
+            pCtx.drawImage(pImg, 0, 0, previewCanvas.width, previewCanvas.height);
+            const thumbUrl = previewCanvas.toDataURL('image/jpeg', 0.8);
+
+            const baseName = item.name.replace(/\.[^.]+$/, '');
+            const ext = 'jpg';
+
+            card.innerHTML = `
+                <div class="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+                    <img src="${thumbUrl}" class="max-w-full max-h-full object-contain" alt="preview">
+                </div>
+                <div class="p-3">
+                    <p class="text-xs text-gray-600 font-medium truncate mb-1" title="${item.name}">${item.name}</p>
+                    <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
+                        <span>${tw}×${th}</span>
+                        <span>${origSize} → ${newSize}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="downloadSingle(${index}, '${baseName}_${tw}x${th}.${ext}')" class="flex-1 px-3 py-2 bg-primary/10 text-primary rounded-lg text-xs font-medium hover:bg-primary/20 transition-colors">
+                            下载
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+        pImg.src = item.resultUrl;
+
+        container.appendChild(card);
+    }
+
+    // ============ Downloads ============
+    function downloadSingle(index, filename) {
+        const item = state.images[index];
+        if (!item || !item.resultUrl) return;
+        const a = document.createElement('a');
+        a.href = item.resultUrl;
+        a.download = filename;
+        a.click();
+        showToast('开始下载', 'success');
+    }
+
+    function downloadAll() {
+        if (state.images.length === 0) return;
+        const size = getCurrentSize();
+        if (!size) return;
+
+        state.images.forEach((item, index) => {
+            let tw = size.width;
+            let th = size.height;
+            if (th === 0 && tw > 0) th = Math.round(item.img.height * (tw / item.img.width));
+            if (tw === 0 && th > 0) tw = Math.round(item.img.width * (th / item.img.height));
+            if (tw === 0 && th === 0) {
+                tw = parseInt(document.getElementById('customWidth').value) || 800;
+                th = parseInt(document.getElementById('customHeight').value) || 800;
+            }
+            const baseName = item.name.replace(/\.[^.]+$/, '');
+            setTimeout(() => downloadSingle(index, `${baseName}_${tw}x${th}.jpg`), index * 200);
+        });
+        showToast(`开始下载 ${state.images.length} 张图片`, 'success');
+    }
+
+    // ============ Utilities ============
+    function formatBytes(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function showToast(msg, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        const colors = {
+            success: 'bg-green-500',
+            warning: 'bg-amber-500',
+            info: 'bg-blue-500',
+            error: 'bg-red-500'
+        };
+        toast.className = `toast ${colors[type] || colors.info} text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg`;
+        toast.textContent = msg;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    // ============ Start ============
+    init();
+    </script>
+</body>
+</html>
