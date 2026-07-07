@@ -7,6 +7,12 @@
     <meta name="description" content="电商图片尺寸适配工具，支持淘宝、天猫、京东、拼多多、小红书、抖音、微信公众号等主流电商平台的图片尺寸裁剪和缩放。">
     <meta name="keywords" content="电商图片,图片尺寸,淘宝图片,京东图片,图片裁剪,图片缩放,电商工具">
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#f97316">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="图片尺寸">
+    <link rel="apple-touch-icon" href="/favicon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -661,6 +667,12 @@
 
     // ============ Start ============
     init();
+    </script>
+
+    <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
     </script>
 </body>
 </html>
