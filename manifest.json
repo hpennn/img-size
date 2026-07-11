@@ -1,22 +1,22 @@
 {
-  "name": "图片尺寸适配",
+  "name": "图片尺寸调整",
   "short_name": "图片尺寸",
-  "description": "电商图片尺寸适配工具，一键裁剪适配淘宝、京东、拼多多、小红书、抖音等平台",
+  "description": "在线图片尺寸调整工具",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#f97316",
+  "background_color": "#f8fafc",
+  "theme_color": "#d946ef",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
